@@ -37,7 +37,9 @@ import java.awt.*;
 import java.awt.color.ColorSpace;
 import java.awt.color.ICC_ColorSpace;
 import java.awt.image.*;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -172,7 +174,17 @@ public class PDFImage {
      * @param obj the PDFObject containing the image's dictionary and stream
      * @param resources the current resources
      */
-    public static PDFImage createImage(PDFObject obj, Map resources)
+    public static PDFImage createImage(PDFObject obj, Map resources) throws IOException {
+        return createImage( obj, resources, false);
+    }
+
+    /**
+     * Read a PDFImage from an image dictionary and stream
+     * @see PDFImage#createImage(PDFObject, java.util.Map)
+     * @param useAsSMask - flag for switching colors in case image is used as sMask internally
+     *                     this is needed for handling transparency in smask images.
+     */
+    static PDFImage createImage(PDFObject obj, Map resources, boolean useAsSMask)
             throws IOException {
         // create the image
         PDFImage image = new PDFImage(obj);
@@ -204,14 +216,16 @@ public class PDFImage {
             // create the indexed color space for the mask
             // [PATCHED by michal.busta@gmail.com] - default value od Decode according to PDF spec. is [0, 1]
         	// so the color arry should be:
-            Color[] colors = {Color.BLACK, Color.WHITE};
+            // [PATCHED by XOND] - switched colors in case the image is used as SMask for another image, otherwise transparency isn't
+            //					   handled correctly.
+            Color[] colors = useAsSMask? new Color[]{ Color.WHITE, Color.BLACK } : new Color[]{ Color.BLACK, Color.WHITE };
 
             PDFObject imageMaskDecode = obj.getDictRef("Decode");
             if (imageMaskDecode != null) {
                 PDFObject[] array = imageMaskDecode.getArray();
                 float decode0 = array[0].getFloatValue();
                 if (decode0 == 1.0f) {
-                    colors = new Color[]{Color.WHITE, Color.BLACK};
+                    colors = useAsSMask? new Color[]{ Color.BLACK, Color.WHITE }: new Color[]{ Color.WHITE, Color.BLACK };
                 }
             }
             image.setColorSpace(new IndexedColor(colors));
@@ -259,7 +273,7 @@ public class PDFImage {
             if (sMaskObj != null) {
                 if (sMaskObj.getType() == PDFObject.STREAM) {
                     try {
-                        PDFImage sMaskImage = PDFImage.createImage(sMaskObj, resources);
+                        PDFImage sMaskImage = PDFImage.createImage(sMaskObj, resources, true);
                         image.setSMask(sMaskImage);
                     } catch (IOException ex) {
                         p("ERROR: there was a problem parsing the mask for this object");
