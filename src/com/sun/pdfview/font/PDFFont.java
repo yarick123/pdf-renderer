@@ -27,7 +27,6 @@ import java.io.RandomAccessFile;
 import java.util.*;
 import java.util.regex.Pattern;
 
-import com.sun.org.apache.xalan.internal.xsltc.compiler.util.MultiHashtable;
 import com.sun.pdfview.PDFObject;
 import com.sun.pdfview.PDFParseException;
 import com.sun.pdfview.font.ttf.TrueTypeFont;

@@ -1491,7 +1491,7 @@ public class PDFFile {
             // find startxref in scan
             String scans = new String(scanbuf);
             int loc = scans.lastIndexOf(scanToken);
-            if (loc > 0) {
+            if (loc >= 0) {
                 buf.position(scanPos + loc + scanToken.length());
                 return true;
             }
