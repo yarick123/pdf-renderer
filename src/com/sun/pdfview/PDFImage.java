@@ -394,7 +394,22 @@ public class PDFImage {
                     final ImageReader jpegReader = jpegReaderIt.next();
                     jpegReader.setInput(ImageIO.createImageInputStream(
                             new ByteBufferInputStream(jpegData)), true, false);
-                    return readImage(jpegReader, readParam);
+                    try {
+                        return readImage(jpegReader, readParam);
+                    } catch (Exception e) {
+                        if (e instanceof IIOException) {
+                            throw (IIOException)e;
+                        }
+                        // Any other exceptions here are probably due to internal
+                        // problems with the image reader.
+                        // A concrete example of this happening is described here:
+                        // http://java.net/jira/browse/PDF_RENDERER-132 where
+                        // JAI imageio extension throws an
+                        // IndexOutOfBoundsException on progressive JPEGs.
+                        // We'll just treat it as an IIOException for convenience
+                        // and hopefully a subsequent reader can handle it
+                        throw new IIOException("Internal reader error?", e);
+                    }
                 } catch (IIOException e) {
                     // its most likely complaining about an unsupported image
                     // type; hopefully the next image reader will be able to
