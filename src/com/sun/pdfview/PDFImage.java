@@ -331,8 +331,8 @@ public class PDFImage {
         private ByteBuffer jpegData;
         /** The color model employed */
         private ColorModel cm;
-        /** Whether the YCCK decode work-around should be used */
-        private boolean ycckDecodeMode = false;
+        /** Whether the YCCK/CMYK decode work-around should be used */
+        private boolean ycckcmykDecodeMode = false;
 
         /**
          * Class constructor
@@ -345,17 +345,17 @@ public class PDFImage {
         }
 
         /**
-         * Identify whether the decoder should operate in YCCK
+         * Identify whether the decoder should operate in YCCK/CMYK
          * decode mode, whereby the YCCK Chroma is specifically
          * looked for and the color model is changed to support
          * converting raw YCCK color values, working around
          * a lack of YCCK/CMYK report in the standard Java
          * jpeg readers. Non-YCCK images will not be decoded
          * while in this mode.
-         * @param ycckDecodeMode
+         * @param ycckcmykDecodeMode
          */
-        public void setYcckDecodeMode(boolean ycckDecodeMode) {
-            this.ycckDecodeMode = ycckDecodeMode;
+        public void setYcckCmykDecodeMode( boolean ycckcmykDecodeMode ) {
+            this.ycckcmykDecodeMode = ycckcmykDecodeMode;
         }
 
         /**
@@ -409,7 +409,7 @@ public class PDFImage {
         }
 
         private BufferedImage readImage(ImageReader jpegReader, ImageReadParam param) throws IOException {
-            if (ycckDecodeMode) {
+            if ( ycckcmykDecodeMode ) {
                 // The standard Oracle Java JPEG readers can't deal with CMYK YCCK encoded images
                 // without a little help from us. We'll try and pick up such instances and work around it.
                 final IIOMetadata imageMeta = jpegReader.getImageMetadata(0);
@@ -421,32 +421,41 @@ public class PDFImage {
                             final Node csType = getChild(chroma, "ColorSpaceType");
                             if (csType != null) {
                                 final Attr csTypeNameNode = (Attr)csType.getAttributes().getNamedItem("name");
-                                if (csTypeNameNode != null && "YCCK".equals(csTypeNameNode.getValue())) {
-                                    // So it's a YCCK image, and we can coax a workable image out of it
-                                    // by grabbing the raw raster and installing a YCCK converting
-                                    // color space wrapper around the existing (CMYK) color space; this will
-                                    // do the YCCK conversion for us
+                                if (csTypeNameNode != null ) {
+                                    final String typeName = csTypeNameNode.getValue();
+                                    final boolean YCCK;
+                                    if( (YCCK="YCCK".equals( typeName )) || "CMYK".equals(typeName) ) {
+                                        // If it's a YCCK image, then we can coax a workable image out of it
+                                        // by grabbing the raw raster and installing a YCCK converting
+                                        // color space wrapper around the existing (CMYK) color space; this will
+                                        // do the YCCK conversion for us
+                                        //
+                                        // If it's a CMYK image - just raster it in existing CMYK color space
 
-                                    // first make sure we can get the unadjusted raster
-                                    final Raster raster = jpegReader.readRaster(0, param);
+                                        // first make sure we can get the unadjusted raster
+                                        final Raster raster = jpegReader.readRaster(0, param);
 
-                                    // and now use it with a YCCK converting color space.
-                                    PDFImage.this.colorSpace = new PDFColorSpace(new YCCKColorSpace(colorSpace.getColorSpace()));
-                                    // re-calculate the color model since the color space has changed
-                                    cm = PDFImage.this.createColorModel();
-                                    return new BufferedImage(
-                                        cm,
-                                        Raster.createWritableRaster(raster.getSampleModel(), raster.getDataBuffer(), null),
-                                        true,
-                                        null);
+                                        if( YCCK ) {
+                                            // and now use it with a YCCK converting color space.
+                                            PDFImage.this.colorSpace = new PDFColorSpace(new YCCKColorSpace(colorSpace.getColorSpace()));
+                                            // re-calculate the color model since the color space has changed
+                                            cm = PDFImage.this.createColorModel();
+                                        }
 
+                                        return new BufferedImage(
+                                            cm,
+                                            Raster.createWritableRaster(raster.getSampleModel(), raster.getDataBuffer(), null),
+                                            true,
+                                            null);
+
+                                    }
                                 }
                             }
                         }
                     }
                 }
 
-                throw new IIOException("Not a YCCK image");
+                throw new IIOException("Neither YCCK nor CMYK image");
 
             } else {
 
@@ -549,14 +558,14 @@ public class PDFImage {
             } catch (IIOException e) {
                 decodeEx = e;
                 // The native readers weren't able to process the image.
-                // One common situation is that the image is YCCK encoded,
+                // One common situation is that the image is YCCK/CMYK encoded,
                 // which isn't supported by the default jpeg readers.
                 // We've got a work-around we can attempt, though:
-                decoder.setYcckDecodeMode(true);
+                decoder.setYcckCmykDecodeMode( true );
                 try {
                     bi = decoder.decode();
                 } catch (IOException e2) {
-                    // It probably wasn't the YCCK issue! We'll drop
+                    // It probably wasn't the YCCK/CMYK issue! We'll drop
                     // through and allow the initial exception to be reported
                 }
             }
