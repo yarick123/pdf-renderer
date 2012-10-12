@@ -48,7 +48,12 @@ public class Type0Font extends PDFFont {
         fonts = new PDFFont[descendantFonts.length];
         
         for (int i = 0; i < descendantFonts.length; i++) {
-            fonts[i] = PDFFont.getFont(descendantFonts[i], null);
+            PDFFont descFont = PDFFont.getFont(descendantFonts[i], null);
+            if (descFont instanceof CIDFontType0) {
+            	((CIDFontType0)descFont).parseToUnicodeMap(fontObj);
+            }
+        	
+            fonts[i] = descFont;
         }
     }
     

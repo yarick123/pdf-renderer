@@ -187,11 +187,18 @@ public abstract class PDFFont {
             // load a type 3 font
             font = new Type3Font(baseFont, obj, resources, descriptor);
         } else if (subType.equals("CIDFontType2")) {
-            font = new CIDFontType2(baseFont, obj, descriptor);
+        	if(descriptor.getFontFile2() != null) {
+                font = new CIDFontType2(baseFont, obj, descriptor);
+        	}else {
+                // fake it with a built-in font
+                font = new BuiltinFont(baseFont, obj, descriptor);
+        	}
         } else if (subType.equals("CIDFontType0")) {
-            font = new CIDFontType2(baseFont, obj, descriptor);
-//            font = new CIDFontType0(baseFont, obj, descriptor);
-//            throw new IOException ("CIDFontType0 is unimplemented. " + obj);
+        	if(descriptor.getFontFile2() !=null){
+                font = new CIDFontType2(baseFont, obj, descriptor);
+        	}else {
+                font = new CIDFontType0(baseFont, obj, descriptor);
+        	}
         } else {
             throw new PDFParseException("Don't know how to handle a '" +
                     subType + "' font");
