@@ -327,9 +327,9 @@ public class PDFImage {
 //            	ImageIO.write(bi, "png", new File("/tmp/test/" + System.identityHashCode(this) + ".png"));
             return bi;
         } catch (IOException ioe) {
-            System.out.println("Error reading image");
-            ioe.printStackTrace();
-            return null;
+            // For ALF-6162 we want to know the image is invalid so we can try another transformer or
+            // display a place holder.
+            throw new RuntimeException("Error reading image: "+ioe.getMessage(), ioe);
         }
     }
 

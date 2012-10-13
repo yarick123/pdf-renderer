@@ -38,6 +38,7 @@ public abstract class BaseWatchable implements Watchable, Runnable {
     private static boolean SuppressSetErrorStackTrace = false;
     /** the thread we are running in */
     private Thread thread;
+    private Exception exception;
 
     /** 
      * Creates a new instance of BaseWatchable
@@ -303,11 +304,16 @@ public abstract class BaseWatchable implements Watchable, Runnable {
      * Set an error on this watchable
      */
     protected void setError(Exception error) {
+        exception = error;
         if (!SuppressSetErrorStackTrace) {
             error.printStackTrace();
         }
 
         setStatus(Watchable.ERROR);
+    }
+
+    public Exception getException() {
+        return exception;
     }
 
     private String getStatusString() {

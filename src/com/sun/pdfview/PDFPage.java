@@ -237,6 +237,8 @@ public class PDFPage {
 
             if (!renderer.isFinished()) {
                 renderer.go(wait);
+                if (renderer.getStatus() == Watchable.ERROR)
+                    throw new RuntimeException(renderer.getException());
             }
         }
 
