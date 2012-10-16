@@ -409,7 +409,7 @@ public class PDFImage {
                     jpegReader.setInput(ImageIO.createImageInputStream(
                             new ByteBufferInputStream(jpegData)), true, false);
                     try {
-                        return readImage(jpegReader, readParam);
+                    return readImage(jpegReader, readParam);
                     } catch (Exception e) {
                         if (e instanceof IIOException) {
                             throw (IIOException)e;
@@ -494,7 +494,17 @@ public class PDFImage {
                 } else {
                     // otherwise we'll create a new buffered image with the
                     // desired color model
-                    return new BufferedImage(cm, jpegReader.read(0, param).getRaster(), true, null);
+                    BufferedImage bi = jpegReader.read(0, param);
+                    try {
+                        return new BufferedImage(cm, bi.getRaster(), true, null);
+                    } catch(IllegalArgumentException raster_ByteInterleavedRaster) {
+//                      cm = bi.getColorModel();
+//                      return bi;
+// TODO: log, tgat we skipped an image
+                        BufferedImage bi2 = new BufferedImage( bi.getWidth(), bi.getHeight(), BufferedImage.TYPE_BYTE_INDEXED, new IndexColorModel( 8, 1, new byte[]{0}, new byte[]{0}, new byte[]{0}, 0 ) );
+                        cm = bi2.getColorModel();
+                        return bi2;
+                    }
                 }
             }
 
@@ -999,10 +1009,11 @@ public class PDFImage {
                         0, true);
             }
         } else {
-            int[] bits = new int[cs.getNumComponents()];
-            for (int i = 0; i < bits.length; i++) {
+            ColorSpace colorSpace = cs.getColorSpace();
+
+            int[] bits = new int[colorSpace.getNumComponents()];
+            for (int i = 0; i < bits.length; i++)
                 bits[i] = getBitsPerComponent();
-            }
 
             return decode != null ?
                     new DecodeComponentColorModel(cs.getColorSpace(), bits) :
