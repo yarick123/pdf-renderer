@@ -37,9 +37,7 @@ import java.awt.*;
 import java.awt.color.ColorSpace;
 import java.awt.color.ICC_ColorSpace;
 import java.awt.image.*;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -157,6 +155,9 @@ public class PDFImage {
     private float[] decode;
     private float[] decodeMins;
     private float[] decodeCoefficients;
+
+    private final static String PROP_DO_NOT_SKIP_ERRORS = "PDFRenderer.donotSkipErrors";
+    private final static boolean donotSkipErrors = Boolean.getBoolean(PROP_DO_NOT_SKIP_ERRORS);
 
     /** the actual image data */
     private PDFObject imageObj;
@@ -327,9 +328,14 @@ public class PDFImage {
 //            	ImageIO.write(bi, "png", new File("/tmp/test/" + System.identityHashCode(this) + ".png"));
             return bi;
         } catch (IOException ioe) {
-            // For ALF-6162 we want to know the image is invalid so we can try another transformer or
-            // display a place holder.
-            throw new RuntimeException("Error reading image: "+ioe.getMessage(), ioe);
+            if( donotSkipErrors ) {
+                // For ALF-6162 we want to know the image is invalid so we can try another transformer or
+                // display a place holder.
+                throw new RuntimeException("Error reading image: "+ioe.getMessage(), ioe);
+            }
+            System.out.println("PDFImage.getImage: Error reading image. The image has been skipped");
+            ioe.printStackTrace();
+            return null;
         }
     }
 
@@ -408,28 +414,23 @@ public class PDFImage {
                     final ImageReader jpegReader = jpegReaderIt.next();
                     jpegReader.setInput(ImageIO.createImageInputStream(
                             new ByteBufferInputStream(jpegData)), true, false);
-                    try {
                     return readImage(jpegReader, readParam);
-                    } catch (Exception e) {
-                        if (e instanceof IIOException) {
-                            throw (IIOException)e;
-                        }
-                        // Any other exceptions here are probably due to internal
-                        // problems with the image reader.
-                        // A concrete example of this happening is described here:
-                        // http://java.net/jira/browse/PDF_RENDERER-132 where
-                        // JAI imageio extension throws an
-                        // IndexOutOfBoundsException on progressive JPEGs.
-                        // We'll just treat it as an IIOException for convenience
-                        // and hopefully a subsequent reader can handle it
-                        throw new IIOException("Internal reader error?", e);
-                    }
                 } catch (IIOException e) {
                     // its most likely complaining about an unsupported image
                     // type; hopefully the next image reader will be able to
                     // understand it
                     jpegData.reset();
                     lastIioEx = e;
+                } catch (Exception e) {
+                    // Any other exceptions here are probably due to internal
+                    // problems with the image reader.
+                    // A concrete example of this happening is described here:
+                    // http://java.net/jira/browse/PDF_RENDERER-132 where
+                    // JAI imageio extension throws an
+                    // IndexOutOfBoundsException on progressive JPEGs.
+                    // We'll just treat it as an IIOException for convenience
+                    // and hopefully a subsequent reader can handle it
+                    throw new IIOException("Internal reader error?", e);
                 }
             }
 
@@ -498,9 +499,12 @@ public class PDFImage {
                     try {
                         return new BufferedImage(cm, bi.getRaster(), true, null);
                     } catch(IllegalArgumentException raster_ByteInterleavedRaster) {
+// makes bg colored frame around the picture,
+// thus commented
 //                      cm = bi.getColorModel();
 //                      return bi;
-// TODO: log, tgat we skipped an image
+                        System.out.println( "Image skipped: "+raster_ByteInterleavedRaster );
+                        raster_ByteInterleavedRaster.printStackTrace( System.out );
                         BufferedImage bi2 = new BufferedImage( bi.getWidth(), bi.getHeight(), BufferedImage.TYPE_BYTE_INDEXED, new IndexColorModel( 8, 1, new byte[]{0}, new byte[]{0}, new byte[]{0}, 0 ) );
                         cm = bi2.getColorModel();
                         return bi2;
@@ -542,6 +546,8 @@ public class PDFImage {
      *  is being used
      */
     protected BufferedImage parseData(byte[] data, ByteBuffer jpegData) throws IOException {
+//        DebugUtil.write_jpeg( jpegData );
+//
 //        String hex;
 //        String name;
 //        synchronized (System.out) {
@@ -710,8 +716,8 @@ public class PDFImage {
 
         // add in the alpha data supplied by the SMask, if any
         PDFImage sMaskImage = getSMask();
-        if (sMaskImage != null) {
-            BufferedImage si = sMaskImage.getImage();
+        BufferedImage si;
+        if (sMaskImage != null && (si = sMaskImage.getImage()) != null) {
 
             BufferedImage outImage = new BufferedImage(getWidth(),
                     getHeight(), BufferedImage.TYPE_INT_ARGB);
@@ -945,8 +951,6 @@ public class PDFImage {
     /**
      * get a Java ColorModel consistent with the current color space,
      * number of bits per component and decode array
-     *
-     * @param bpc the number of bits per component
      */
     private ColorModel createColorModel() {
         PDFColorSpace cs = getColorSpace();
@@ -1010,6 +1014,11 @@ public class PDFImage {
             }
         } else {
             ColorSpace colorSpace = cs.getColorSpace();
+
+//            if(cs instanceof AlternateColorSpace)
+//                colorSpace = cs.getColorSpace();
+//            else if (cs.getColorSpace().getType() == ColorSpace.TYPE_CMYK)
+//                colorSpace = ColorSpace.getInstance(ColorSpace.CS_sRGB);
 
             int[] bits = new int[colorSpace.getNumComponents()];
             for (int i = 0; i < bits.length; i++)
