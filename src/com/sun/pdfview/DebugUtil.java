@@ -7,7 +7,7 @@ import java.nio.ByteBuffer;
 
 /**
  * debugging functions
- * User: yarick123@gmail.com
+ * author: yarick123@gmail.com
  */
 public class DebugUtil {
     private static int test_jpg_count;
