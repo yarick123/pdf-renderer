@@ -1173,7 +1173,7 @@ public class PDFFile {
 
             final int lastObjNum = objNumStart + numEntries;
             ensureXrefEntriesCapacity(lastObjNum + 1);
-            
+
 
             consumeWhitespace(fileBuf);
 
@@ -1350,7 +1350,7 @@ public class PDFFile {
             index = new PDFObject[] {
                     new PDFObject(0),
                     new PDFObject(size)
-            };             
+            };
         }
 
         final ByteBuffer table = xrefStream.getStreamBuffer();
@@ -1377,7 +1377,7 @@ public class PDFFile {
                 }
             }
         }
-        
+
         return processTrailerDict(xrefStream, true, followPrev);
 
     }
@@ -1641,6 +1641,7 @@ public class PDFFile {
      *
      * @param pagenum the number of the page to get commands for
      * @param wait if true, do not exit until the page is complete.
+     * @return null if the page cannot be parsed or contains bugs and {@link PDFRendererConfig#isSkipErrors} is false
      */
     public PDFPage getPage(int pagenum, boolean wait) {
         Integer key = new Integer(pagenum);
@@ -1680,9 +1681,10 @@ public class PDFFile {
         		parser.go(wait);
         	}
         	if (wait && parser.getStatus() == Watchable.ERROR) {
-                System.out.println("PDFRenderer: An error took place. Returning a null page");
-                return null;
-        	}	
+                if( !PDFRendererConfig.getInstance().isSkipErrors() )
+                    return null;
+                System.err.println("PDFRenderer: An error took place. Returning not complete page");
+            }
         }
 
         return page;

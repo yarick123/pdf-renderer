@@ -8,12 +8,12 @@
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
  * version 2.1 of the License, or (at your option) any later version.
- * 
+ *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * Lesser General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Lesser General Public
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
@@ -29,6 +29,7 @@ import java.util.regex.Pattern;
 
 import com.sun.pdfview.PDFObject;
 import com.sun.pdfview.PDFParseException;
+import com.sun.pdfview.font.cid.PDFCMap;
 import com.sun.pdfview.font.ttf.TrueTypeFont;
 
 /**
@@ -453,10 +454,10 @@ public abstract class PDFFont {
      *
      * The preferred method of getting the glyph should be by name.  If the
      * name is null or not valid, then the character code should be used.
-     * If the both the code and the name are invalid, the undefined glyph 
+     * If the both the code and the name are invalid, the undefined glyph
      * should be returned.
      *
-     * Note this method must *always* return a glyph.  
+     * Note this method must *always* return a glyph.
      *
      * @param src the character code of this glyph
      * @param name the name of this glyph or null if unknown
@@ -472,7 +473,7 @@ public abstract class PDFFont {
         return getBaseFont();
     }
 
-    /** 
+    /**
      * Compare two fonts base on the baseFont
      */
     @Override

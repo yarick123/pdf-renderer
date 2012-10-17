@@ -37,7 +37,6 @@ import java.util.Stack;
 
 import com.sun.pdfview.colorspace.PDFColorSpace;
 import com.sun.pdfview.colorspace.PatternSpace;
-import com.sun.pdfview.decode.PDFDecoder;
 import com.sun.pdfview.font.PDFFont;
 import com.sun.pdfview.pattern.PDFShader;
 
@@ -520,6 +519,7 @@ public class PDFParser extends BaseWatchable {
                 float[] dashary = popFloatArray();
                 cmds.addDash(dashary, phase);
             } else if (cmd.equals("ri")) {
+                popString();
                 // TODO: do something with rendering intent (page 197)
             } else if (cmd.equals("i")) {
                 popFloat();
@@ -793,6 +793,22 @@ public class PDFParser extends BaseWatchable {
             } else if (cmd.equals("QBT")) {// 'Q' & 'BT' mushed together!
                 processQCmd();
                 processBTCmd();
+            } else if (cmd.equals("Qq")) {// 'Q' & 'q' mushed together!
+                processQCmd();
+                // push the parser state
+                parserStates.push((ParserState) state.clone());
+                // push graphics state
+                cmds.addPush();
+            } else if (cmd.equals("qBT")) {// 'q' & 'BT' mushed together!
+                // push the parser state
+                parserStates.push((ParserState) state.clone());
+                // push graphics state
+                cmds.addPush();
+                processBTCmd();
+            } else if (cmd.equals("q1")) {
+                debug("**** WARNING: Not handled command: " + cmd + " **************************", 10);
+            }else if (cmd.equals("q0")) {
+                debug("**** WARNING: Not handled command: " + cmd + " **************************", 10);
             } else {
                 if (catchexceptions) {
                     debug("**** WARNING: Unknown command: " + cmd + " **************************", 10);
@@ -823,7 +839,8 @@ public class PDFParser extends BaseWatchable {
         // pop graphics state ('Q')
         cmds.addPop();
         // pop the parser state
-        state = (ParserState) parserStates.pop();
+        if( !parserStates.isEmpty() )
+            state = parserStates.pop();
     }
 
     /**
@@ -1151,6 +1168,11 @@ public class PDFParser extends BaseWatchable {
             cmds.addFillPaint(shader.getPaint());
             cmds.addPath(new GeneralPath(bbox), PDFShapeCmd.FILL);
         }
+        else {
+            //if no bounding box is set, use the default user space
+            cmds.addFillPaint(shader.getPaint());
+            cmds.addPath(new GeneralPath(cmds.getBBox()), PDFShapeCmd.FILL);
+        }
 
         cmds.addPop();
     }
@@ -1230,12 +1252,15 @@ public class PDFParser extends BaseWatchable {
      * isn't a number
      */
     private float popFloat() throws PDFParseException {
-        Object obj = stack.pop();
-        if (obj instanceof Double) {
-            return ((Double) obj).floatValue();
-        } else {
-            throw new PDFParseException("Expected a number here.");
+        if( !stack.isEmpty() ) {
+            Object obj = stack.pop();
+            if (obj instanceof Double) {
+                return ((Double) obj).floatValue();
+            } else {
+                throw new PDFParseException("Expected a number here.");
+            }
         }
+        return 0;
     }
 
     /**
