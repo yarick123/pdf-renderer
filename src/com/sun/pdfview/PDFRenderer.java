@@ -538,6 +538,7 @@ public class PDFRenderer extends BaseWatchable implements Runnable {
      *                 has gone away
      *         </ul>
      */
+    @Override
     public int iterate() throws Exception {
         // make sure we have a page to render
         if (page == null) {

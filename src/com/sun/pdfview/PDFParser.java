@@ -67,7 +67,7 @@ public class PDFParser extends BaseWatchable {
     /** a weak reference to the page we render into.  For the page
      * to remain available, some other code must retain a strong reference to it.
      */
-    private WeakReference pageRef;
+    private final WeakReference<PDFPage> pageRef;
     /** the actual command, for use within a singe iteration.  Note that
      * this must be released at the end of each iteration to assure the
      * page can be collected if not in use
@@ -126,7 +126,7 @@ public class PDFParser extends BaseWatchable {
     /**
      * a token from a PDF Stream
      */
-    class Tok {
+    static class Tok {
 
         /** begin bracket &lt; */
         public static final int BRKB = 11;
@@ -467,10 +467,11 @@ public class PDFParser extends BaseWatchable {
      *                 no longer available
      *         </ul>
      */
+    @Override
     public int iterate() throws Exception {
         // make sure the page is still available, and create the reference
         // to it for use within this iteration
-        cmds = (PDFPage) pageRef.get();
+        cmds = pageRef.get();
         if (cmds == null) {
             System.out.println("Page gone.  Stopping");
             return Watchable.STOPPED;
@@ -771,16 +772,16 @@ public class PDFParser extends BaseWatchable {
                 popString();
             } else if (cmd.equals("DP")) {
                 // mark point with dictionary (role, ref)
-                // ref is either inline dict or name in "Properties" rsrc
-                Object ref = stack.pop();
+                // result is either inline dict or name in "Properties" rsrc
+                stack.pop();
                 popString();
             } else if (cmd.equals("BMC")) {
                 // begin marked content (role)
                 popString();
             } else if (cmd.equals("BDC")) {
                 // begin marked content with dict (role, ref)
-                // ref is either inline dict or name in "Properties" rsrc
-                Object ref = stack.pop();
+                // result is either inline dict or name in "Properties" rsrc
+                stack.pop();
                 popString();
             } else if (cmd.equals("EMC")) {
                 // end marked content
@@ -1037,7 +1038,7 @@ public class PDFParser extends BaseWatchable {
     private Object parseObject() throws PDFParseException {
         Tok t = nextToken();
         if (t.type == Tok.NUM) {
-            return new Double(tok.value);
+            return Double.valueOf(tok.value);
         } else if (t.type == Tok.STR) {
             return tok.name;
         } else if (t.type == Tok.NAME) {
@@ -1122,16 +1123,16 @@ public class PDFParser extends BaseWatchable {
         }
 
 
-        PDFObject imObj = (PDFObject) hm.get("ImageMask");
+        PDFObject imObj = hm.get("ImageMask");
         if (imObj != null && imObj.getBooleanValue()) {
-        	// [PATCHED by michal.busta@gmail.com] - default value according to PDF spec. is [0, 1]
-        	// there is no need to swap array - PDF image should handle this values
-            Double[] decode = {new Double(0), new Double(1)};
+            // [PATCHED by michal.busta@gmail.com] - default value according to PDF spec. is [0, 1]
+            // there is no need to swap array - PDF image should handle this values
+            Double[] decode = {Double.valueOf(0), Double.valueOf(1)};
 
-            PDFObject decodeObj = (PDFObject) hm.get("Decode");
+            PDFObject decodeObj = hm.get("Decode");
             if (decodeObj != null) {
-                decode[0] = new Double(decodeObj.getAt(0).getDoubleValue());
-                decode[1] = new Double(decodeObj.getAt(1).getDoubleValue());
+                decode[0] = Double.valueOf(decodeObj.getAt(0).getDoubleValue());
+                decode[1] = Double.valueOf(decodeObj.getAt(1).getDoubleValue());
             }
 
             hm.put("Decode", new PDFObject(decode));
@@ -1298,7 +1299,6 @@ public class PDFParser extends BaseWatchable {
      * pop an array of integer values off the stack.  This is equivalent
      * to filling an array from end to front by popping values off the
      * stack.
-     * @param count the number of numbers to pop off the stack
      * @return an array of length <tt>count</tt>
      * @throws PDFParseException if any of the values popped off the
      * stack are not numbers.
