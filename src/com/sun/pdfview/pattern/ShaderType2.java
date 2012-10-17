@@ -76,6 +76,7 @@ public class ShaderType2 extends PDFShader {
     /**
      * Parse the shader-specific data
      */
+    @Override
     public void parse(PDFObject shaderObj) throws IOException
     {
         // read the axis coordinates (required)
@@ -124,6 +125,7 @@ public class ShaderType2 extends PDFShader {
     /**
      * Create a paint that paints this pattern
      */
+    @Override
     public PDFPaint getPaint() {
         return PDFPaint.getPaint(new Type2Paint());
     }
@@ -234,6 +236,7 @@ public class ShaderType2 extends PDFShader {
         }
 
         /** create a paint context */
+        @Override
         public PaintContext createContext(ColorModel cm,
                                           Rectangle deviceBounds,
                                           Rectangle2D userBounds,
@@ -253,6 +256,7 @@ public class ShaderType2 extends PDFShader {
             return new Type2PaintContext(model, devStart, devEnd);
         }
 
+        @Override
         public int getTransparency() {
             return Transparency.TRANSLUCENT;
         }
@@ -281,14 +285,17 @@ public class ShaderType2 extends PDFShader {
             this.end = end;
         }
 
+        @Override
         public void dispose() {
             colorModel = null;
         }
 
+        @Override
         public ColorModel getColorModel() {
             return colorModel;
         }
 
+        @Override
         public Raster getRaster(int x, int y, int w, int h) {
             ColorSpace cs = getColorModel().getColorSpace();
             PDFColorSpace shadeCSpace = getColorSpace();
