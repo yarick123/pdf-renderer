@@ -4,8 +4,14 @@
 	<modelVersion>4.0.0</modelVersion>
 
 	<groupId>org.swinglabs</groupId>
-	<artifactId>pdf-renderer-y123</artifactId>
-	<version>1.0.1</version>
+	<artifactId>pdf-renderer-ya</artifactId>
+	<version>1.0.0</version>
+	<description>
+		PDF Renderer library based on https://svn.java.net/svn/pdf-renderer version Version: 0.9.1 (https://svn.java.net/svn/pdf-renderer~svn/tags/release-0.9.1)
+		added patches from nexus-pdfrenderer-0.9.1 (https://artifacts.alfresco.com/nexus/content/repositories/thirdparty/com/sun/pdfview/pdfrenderer/0.9.1-patched/pdfrenderer-0.9.1-patched-sources.zip)
+		some patches from https://github.com/katjas/PDFrenderer
+	</description>
+	<url>https://github.com/yarick123/pdf-renderer</url>
 
 	<build>
 		<sourceDirectory>src</sourceDirectory>
