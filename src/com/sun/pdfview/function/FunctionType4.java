@@ -8,12 +8,12 @@
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
  * version 2.1 of the License, or (at your option) any later version.
- * 
+ *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * Lesser General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Lesser General Public
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
@@ -25,11 +25,11 @@ import java.nio.ByteBuffer;
 import java.util.*;
 
 import com.sun.pdfview.PDFObject;
-import com.sun.pdfview.PDFParseException;
+import com.sun.pdfview.function.postscript.PostScriptParser;
 
 /**
  * <p>A PostScript function is represented as a stream containing code
- * written in a small subset of the PostScript language. 
+ * written in a small subset of the PostScript language.
  * This reference is taken from the (3200-1:2008:7.10.5)<p>
  *
  * http://www.adobe.com/devnet/acrobat/pdfs/adobe_supplement_iso32000.pdf
@@ -41,7 +41,7 @@ public class FunctionType4 extends PDFFunction {
      * in Appendix B - Operators.*/
     private static HashSet<Operation> operationSet = null;
     /** the list of tokens and sub-expressions. */
-    private LinkedList tokens = new LinkedList();
+    private List<String> tokens = new LinkedList<String>();
     /** the stack of operations. The stack contents should all be Comparable. */
     private LinkedList<Object> stack = new LinkedList<Object>();
 
@@ -497,7 +497,7 @@ public class FunctionType4 extends PDFFunction {
                  *
                  * errors: stackoverflow
                  */
-                void eval() {   
+                void eval() {
                     pushBoolean(false);
                 }
             });
@@ -734,7 +734,7 @@ public class FunctionType4 extends PDFFunction {
                  * (a) (b) (c) 2 copy Þ (a) (b) (c) (b) (c) <br>
                  * (a) (b) (c) 0 copy Þ (a) (b) (c) <p>
                  *
-                 * In the other forms, copy copies all the elements of the 
+                 * In the other forms, copy copies all the elements of the
                  * first composite object into the second. The composite
                  * object operands must be of the same type, except that
                  * a packed array can be copied into an array (and only into
@@ -752,7 +752,7 @@ public class FunctionType4 extends PDFFunction {
                  * substring of the second operand into which the elements
                  * were copied. Any remaining elements of array2 or
                  * string2 are unaffected. <p>
-                 * 
+                 *
                  * Example: <br>
                  * /a1 [1 2 3] def<br>
                  * a1 dup length array copy Þ [1 2 3] <p>
@@ -823,9 +823,12 @@ public class FunctionType4 extends PDFFunction {
 
     /** Read the function information from a PDF Object */
     protected void parse(PDFObject obj) throws IOException {
-        // read the postscript from the stream
-        readPS(obj.getStreamBuffer());
-        throw new PDFParseException("Unsupported function type 4.");
+        ByteBuffer buf = obj.getStreamBuffer();
+
+        byte[] byteA = new byte[buf.remaining()];
+        buf.get(byteA);
+        String scriptContent = new String(byteA, "UTF-8");
+        this.tokens = new PostScriptParser().parse(scriptContent);
     }
 
     /**

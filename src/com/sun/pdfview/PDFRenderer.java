@@ -58,7 +58,7 @@ public class PDFRenderer extends BaseWatchable implements Runnable {
     /** a weak reference to the image we render into.  For the image
      * to remain available, some other code must retain a strong reference to it.
      */
-    private WeakReference imageRef;
+    private WeakReference<BufferedImage> imageRef;
     /** the graphics object for use within an iteration.  Note this must be
      * set to null at the end of each iteration, or the image will not be
      * collected
@@ -189,7 +189,8 @@ public class PDFRenderer extends BaseWatchable implements Runnable {
      * push() was called.
      */
     public void pop() {
-        state = (GraphicsState) stack.pop();
+        if( !stack.isEmpty() )
+            state = stack.pop();
 
         setTransform(state.xform);
         setClip(state.cliprgn);
@@ -215,7 +216,7 @@ public class PDFRenderer extends BaseWatchable implements Runnable {
      * see if we would produce a line that was too small, and if so, scale
      * it up to produce a graphics line of 1 pixel, or so. This matches our
      * output with Adobe Reader.
-     * 
+     *
      * @param g
      * @param bs
      * @return
@@ -227,16 +228,16 @@ public class PDFRenderer extends BaseWatchable implements Runnable {
         if (width < 1f) {
             if (bt.getScaleX() > 0.01) {
                 width = 1.0f / (float) bt.getScaleX();
-            } else {
-                // prevent division by a really small number
-                width = 1.0f;
-            }
-            stroke = new BasicStroke(width,
+                stroke = new BasicStroke(width,
                     bs.getEndCap(),
                     bs.getLineJoin(),
                     bs.getMiterLimit(),
                     bs.getDashArray(),
                     bs.getDashPhase());
+            } else {
+                // prevent division by a really small number
+                width = 1.0f;
+            }
         }
         return stroke;
     }
@@ -453,7 +454,7 @@ public class PDFRenderer extends BaseWatchable implements Runnable {
         }
 
         // update the new observer to the current state
-        Image i = (Image) imageRef.get();
+        Image i = imageRef.get();
         if (rendererFinished()) {
             // if we're finished, just send a finished notification, don't
             // add to the list of observers
@@ -509,7 +510,7 @@ public class PDFRenderer extends BaseWatchable implements Runnable {
         Graphics2D graphics = null;
 
         if (imageRef != null) {
-            BufferedImage bi = (BufferedImage) imageRef.get();
+            BufferedImage bi = imageRef.get();
             if (bi != null) {
                 graphics = bi.createGraphics();
             }
@@ -537,6 +538,7 @@ public class PDFRenderer extends BaseWatchable implements Runnable {
      *                 has gone away
      *         </ul>
      */
+    @Override
     public int iterate() throws Exception {
         // make sure we have a page to render
         if (page == null) {
@@ -547,13 +549,13 @@ public class PDFRenderer extends BaseWatchable implements Runnable {
         // object.  If it is, and the graphics is no longer valid, then just quit
         BufferedImage bi = null;
         if (imageRef != null) {
-            bi = (BufferedImage) imageRef.get();
+            bi = imageRef.get();
             if (bi == null) {
                 System.out.println("Image went away.  Stopping");
                 return Watchable.STOPPED;
             }
 
-            g = (Graphics2D) bi.createGraphics();
+            g = bi.createGraphics();
         }
 
         // check if there are any commands to parse.  If there aren't,
@@ -692,8 +694,8 @@ public class PDFRenderer extends BaseWatchable implements Runnable {
         }
 
         synchronized (observers) {
-            for (Iterator i = observers.iterator(); i.hasNext();) {
-                ImageObserver observer = (ImageObserver) i.next();
+            for (Iterator<ImageObserver> i = observers.iterator(); i.hasNext();) {
+                ImageObserver observer = i.next();
 
                 boolean result = observer.imageUpdate(bi, flags,
                         startx, starty,

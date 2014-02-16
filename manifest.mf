@@ -1,3 +1,5 @@
-Manifest-Version: 1.0
+Manifest-Version: 1.3
 X-COMMENT: Main-Class will be added automatically by build
-
+Implementation-Version: "0.9.1+y123-20121017"
+Implementation-URL: "https://github.com/yarick123/pdf-renderer"
+X-Description: "based on https://svn.java.net/svn/pdf-renderer~svn/!svn/bc/140/trunk/, https://github.com/katjas/PDFrenderer rev 5878eb6, https://artifacts.alfresco.com/nexus/content/repositories/thirdparty/com/sun/pdfview/pdfrenderer/0.9.1-patched/pdfrenderer-0.9.1-patched-sources.zip"

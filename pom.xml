@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+
+	<groupId>org.swinglabs</groupId>
+	<artifactId>pdf-renderer-ya</artifactId>
+	<version>1.0.0</version>
+	<description>
+		PDF Renderer library based on https://svn.java.net/svn/pdf-renderer version Version: 0.9.1 (https://svn.java.net/svn/pdf-renderer~svn/tags/release-0.9.1)
+		added patches from nexus-pdfrenderer-0.9.1 (https://artifacts.alfresco.com/nexus/content/repositories/thirdparty/com/sun/pdfview/pdfrenderer/0.9.1-patched/pdfrenderer-0.9.1-patched-sources.zip)
+		some patches from https://github.com/katjas/PDFrenderer
+	</description>
+	<url>https://github.com/yarick123/pdf-renderer</url>
+
+	<build>
+		<sourceDirectory>src</sourceDirectory>
+		<resources>
+			<resource>
+				<directory>src</directory>
+				<excludes><exclude>**/*.java</exclude></excludes>
+			</resource>
+		</resources>
+	</build>
+
+</project>

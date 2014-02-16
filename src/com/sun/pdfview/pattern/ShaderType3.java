@@ -1,6 +1,4 @@
 /*
- * $Id: ShaderType2.java,v 1.2 2007-12-20 18:33:30 rbair Exp $
- *
  * Copyright 2004 Sun Microsystems, Inc., 4150 Network Circle,
  * Santa Clara, California 95054, U.S.A. All rights reserved.
  *
@@ -21,37 +19,36 @@
 
 package com.sun.pdfview.pattern;
 
-import java.awt.Paint;
-import java.awt.PaintContext;
-import java.awt.Rectangle;
-import java.awt.RenderingHints;
-import java.awt.Transparency;
-import java.awt.color.ColorSpace;
-import java.awt.geom.AffineTransform;
-import java.awt.geom.Point2D;
-import java.awt.geom.Rectangle2D;
-import java.awt.image.ColorModel;
-import java.awt.image.ComponentColorModel;
-import java.awt.image.DataBuffer;
-import java.awt.image.Raster;
-import java.awt.image.WritableRaster;
-import java.io.IOException;
-
 import com.sun.pdfview.PDFObject;
 import com.sun.pdfview.PDFPaint;
 import com.sun.pdfview.PDFParseException;
 import com.sun.pdfview.colorspace.PDFColorSpace;
 import com.sun.pdfview.function.PDFFunction;
 
-/**
- * A shader that performs axial shader based on a function.
- */
-public class ShaderType2 extends PDFShader {
-    /** the start of the axis */
-    private Point2D axisStart;
+import java.awt.*;
+import java.awt.color.ColorSpace;
+import java.awt.geom.AffineTransform;
+import java.awt.geom.NoninvertibleTransformException;
+import java.awt.geom.Point2D;
+import java.awt.geom.Rectangle2D;
+import java.awt.image.*;
+import java.io.IOException;
 
-    /** the end of the axis */
-    private Point2D axisEnd;
+/**
+ * A shader that performs radial shader based on a function.
+ */
+public class ShaderType3 extends PDFShader {
+    /** the center of the first circle */
+    private Point2D center1;
+
+    /** the center of the second circle */
+    private Point2D center2;
+
+    /** the radius of the first circle */
+    private float radius1;
+
+    /** the radius of the second circle */
+    private float radius2;
 
     /** the domain minimum */
     private float minT = 0f;
@@ -69,15 +66,15 @@ public class ShaderType2 extends PDFShader {
     private PDFFunction[] functions;
 
     /** Creates a new instance of ShaderType2 */
-    public ShaderType2() {
-        super(2);
+    public ShaderType3() {
+        super(3);
     }
 
     /**
      * Parse the shader-specific data
      */
     @Override
-    public void parse(PDFObject shaderObj) throws IOException
+	public void parse(PDFObject shaderObj) throws IOException
     {
         // read the axis coordinates (required)
         PDFObject coordsObj = shaderObj.getDictRef("Coords");
@@ -85,12 +82,12 @@ public class ShaderType2 extends PDFShader {
             throw new PDFParseException("No coordinates found!");
         }
         PDFObject[] coords = coordsObj.getArray();
-        Point2D start = new Point2D.Float(coords[0].getFloatValue(),
+        center1 = new Point2D.Float(coords[0].getFloatValue(),
                                           coords[1].getFloatValue());
-        Point2D end   = new Point2D.Float(coords[2].getFloatValue(),
-                                          coords[3].getFloatValue());
-        setAxisStart(start);
-        setAxisEnd(end);
+        center2 = new Point2D.Float(coords[3].getFloatValue(),
+                                          coords[4].getFloatValue());
+        radius1 = coords[2].getFloatValue();
+        radius2 = coords[5].getFloatValue();
 
         // read the domain (optional)
         PDFObject domainObj = shaderObj.getDictRef("Domain");
@@ -119,50 +116,22 @@ public class ShaderType2 extends PDFShader {
             setExtendStart(extendArray[0].getBooleanValue());
             setExtendEnd(extendArray[1].getBooleanValue());
         }
-
     }
 
     /**
      * Create a paint that paints this pattern
      */
     @Override
-    public PDFPaint getPaint() {
-        return PDFPaint.getPaint(new Type2Paint());
+	public PDFPaint getPaint() {
+        return PDFPaint.getPaint(new Type3Paint());
     }
 
-    /**
-     * Get the start of the axis
-     */
-    public Point2D getAxisStart() {
-        return axisStart;
-    }
-
-    /**
-     * Set the start of the axis
-     */
-    protected void setAxisStart(Point2D axisStart) {
-        this.axisStart = axisStart;
-    }
-
-    /**
-     * Get the end of the axis
-     */
-    public Point2D getAxisEnd() {
-        return axisEnd;
-    }
-
-    /**
-     * Set the start of the axis
-     */
-    protected void setAxisEnd(Point2D axisEnd) {
-        this.axisEnd = axisEnd;
-    }
 
     /**
      * Get the domain minimum
      */
     public float getMinT() {
-        return minT;
+        return this.minT;
     }
 
     /**
@@ -176,7 +145,7 @@ public class ShaderType2 extends PDFShader {
      * Get the domain maximum
      */
     public float getMaxT() {
-        return maxT;
+        return this.maxT;
     }
 
     /**
@@ -190,7 +159,7 @@ public class ShaderType2 extends PDFShader {
      * Get whether to extend the start of the axis
      */
     public boolean getExtendStart() {
-        return extendStart;
+        return this.extendStart;
     }
 
     /**
@@ -204,7 +173,7 @@ public class ShaderType2 extends PDFShader {
      * Get whether to extend the end of the axis
      */
     public boolean getExtendEnd() {
-        return extendEnd;
+        return this.extendEnd;
     }
 
     /**
@@ -218,7 +187,7 @@ public class ShaderType2 extends PDFShader {
      * Get the functions associated with this shader
      */
     public PDFFunction[] getFunctions() {
-        return functions;
+        return this.functions;
     }
 
     /**
@@ -231,13 +200,13 @@ public class ShaderType2 extends PDFShader {
     /**
      * A subclass of paint that uses this shader to generate a paint
      */
-    class Type2Paint implements Paint {
-        public Type2Paint() {
+    class Type3Paint implements Paint {
+        public Type3Paint() {
         }
 
         /** create a paint context */
         @Override
-        public PaintContext createContext(ColorModel cm,
+		public PaintContext createContext(ColorModel cm,
                                           Rectangle deviceBounds,
                                           Rectangle2D userBounds,
                                           AffineTransform xform,
@@ -250,14 +219,11 @@ public class ShaderType2 extends PDFShader {
                                                        Transparency.TRANSLUCENT,
                                                        DataBuffer.TYPE_BYTE);
 
-            Point2D devStart = xform.transform(getAxisStart(), null);
-            Point2D devEnd = xform.transform(getAxisEnd(), null);
-
-            return new Type2PaintContext(model, devStart, devEnd);
+            return new Type3PaintContext(model, xform);
         }
 
         @Override
-        public int getTransparency() {
+		public int getTransparency() {
             return Transparency.TRANSLUCENT;
         }
     }
@@ -266,47 +232,57 @@ public class ShaderType2 extends PDFShader {
      * A simple paint context that uses an existing raster in device
      * space to generate pixels
      */
-    class Type2PaintContext implements PaintContext {
+    class Type3PaintContext implements PaintContext {
         /** the color model */
         private ColorModel colorModel;
 
-        /** the start of the axis */
-        private Point2D start;
+        /** the transformation */
+        private AffineTransform invXform;
 
-        /** the end of the axis */
-        private Point2D end;
+        private final double dx1x0, dy1y0, dr1r0, sqr0, denom;
 
         /**
          * Create a paint context
          */
-        Type2PaintContext(ColorModel colorModel, Point2D start, Point2D end) {
+        Type3PaintContext(ColorModel colorModel, AffineTransform xform) {
             this.colorModel = colorModel;
-            this.start = start;
-            this.end = end;
+
+            //Precalculate some often needed values;
+            dx1x0 = center2.getX() - center1.getX();
+            dy1y0 = center2.getY() - center1.getY();
+            dr1r0 = radius2 - radius1;
+            sqr0 = radius1*radius1;
+            denom = dx1x0*dx1x0 + dy1y0*dy1y0 - dr1r0*dr1r0;
+
+            try {
+				this.invXform = xform.createInverse();
+			}
+			catch (NoninvertibleTransformException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
         }
 
         @Override
-        public void dispose() {
-            colorModel = null;
+		public void dispose() {
+            this.colorModel = null;
         }
 
         @Override
-        public ColorModel getColorModel() {
-            return colorModel;
+		public ColorModel getColorModel() {
+            return this.colorModel;
         }
 
         @Override
-        public Raster getRaster(int x, int y, int w, int h) {
+		public Raster getRaster(int x, int y, int w, int h) {
             ColorSpace cs = getColorModel().getColorSpace();
             PDFColorSpace shadeCSpace = getColorSpace();
 
             PDFFunction functions[] = getFunctions();
+
             int numComponents = cs.getNumComponents();
 
-            float x0 = (float) start.getX();
-            float x1 = (float) end.getX();
-            float y0 = (float) start.getY();
-            float y1 = (float) end.getY();
+            float[] c1 = new float[2];
 
             float[] inputs = new float[1];
             float[] outputs = new float[shadeCSpace.getNumComponents()];
@@ -314,75 +290,91 @@ public class ShaderType2 extends PDFShader {
 
             // all the data, plus alpha channel
             int[] data = new int[w * h * (numComponents + 1)];
+        	float lastInput = Float.POSITIVE_INFINITY;
+        	final float tol = TOLERANCE * (getMaxT() - getMinT());
 
+            final int advance = 1;
             // for each device coordinate
             for (int j = 0; j < h; j++) {
-                for (int i = 0; i < w + 8; i += 8) {
-                    // find t for that user coordinate
-                    float xp = getXPrime(i + x, j + y, x0, y0, x1, y1);
-                    float t = getT(xp);
+            	for (int i = 0; i < w; i += advance) {
+            		//Get point in user space
+            		invXform.transform(new float[]{x + i, y + j}, 0, c1, 0, 1);
+            		boolean render = true;
+            		float[] s = calculateInputValues(c1[0], c1[1]);
+            		//s[0] <= s[1] holds
+            		//if (s[0] >= 0 && s[1] <= 1) s[1] = s[1];
+            		if (s[1] >= 0 && s[1] <= 1) s[1] = s[1];
+            		else if (extendEnd && s[1] >= 0 && radius1 + s[1]*dr1r0 >= 0) {
+            			s[1] = s[1];
+            		}
+            		else if (s[0] >= 0 && s[0] <= 1) s[1] = s[0];
+            		else if (extendStart && s[1] <= 0 && radius1 + s[1]*dr1r0 >= 0) {
+            			s[1] = s[1];
+            		}
+            		else if (extendStart && s[0] <= 1 && radius1 + s[0]*dr1r0 >= 0) {
+            			s[1] = s[0];
+            		}
+            		else render = false;
 
-                    // calculate the pixel values at t
-                    inputs[0] = t;
-                    if (functions.length == 1) {
-                        functions[0].calculate(inputs, 0, outputs, 0);
-                    } else {
-                        for (int c = 0; c < functions.length; c++) {
-                            functions[c].calculate(inputs, 0, outputs, c);
-                        }
-                    }
-                    if (functions[0].getNumOutputs() != numComponents) {
-                        //CMYK
-                        outputRBG = shadeCSpace.getColorSpace().toRGB(outputs);
-                    }
-                    else outputRBG = outputs;
+            		if (render) {
+            			float t = (getMinT() + s[1]*(getMaxT() - getMinT()));
+            			// calculate the pixel values at t
+            			inputs[0] = t;
+            			if (Math.abs(lastInput - t) > tol) {
 
-                    for (int q = i; q < i + 8 && q < w; q++) {
-                        int base = (j * w + q) * (numComponents + 1);
-                        for (int c = 0; c < numComponents; c++) {
-                            data[base + c] = (int) (outputRBG[c] * 255);
-                        }
-                        data[base + numComponents] = 255;
-                    }
-                }
+            				if (functions.length == 1) {
+            					functions[0].calculate(inputs, 0, outputs, 0);
+            				} else {
+            					for (int c = 0; c < functions.length; c++) {
+            						functions[c].calculate(inputs, 0, outputs, c);
+            					}
+            				}
+
+        					if (!shadeCSpace.getColorSpace().isCS_sRGB()) {
+        						//Can be quite slow
+        						outputRBG = shadeCSpace.getColorSpace().toRGB(outputs);
+        					}
+        					else outputRBG = outputs;
+
+        					lastInput = t;
+            			}
+        				int base = (j * w + i) * (numComponents + 1);
+        				for (int c = 0; c < numComponents; c++) {
+        					data[base + c] = (int) (outputRBG[c] * 255);
+        				}
+        				data[base + numComponents] = 255;
+            		}
+            	}
             }
 
             WritableRaster raster =
                 getColorModel().createCompatibleWritableRaster(w, h);
             raster.setPixels(0, 0, w, h, data);
 
-            Raster child = raster.createTranslatedChild(x, y);
-            return child;
+            return raster.createTranslatedChild(x, y);
         }
 
         /**
-         * x' = (x1 - x0) * (x - x0) + (y1 - y0) * (y - y0)
-         *      -------------------------------------------
-         *               (x1 - x0)^2 + (y1 - y0)^2
+         * From Adobe Technical Note #5600:
+         *
+         * Given a geometric coordinate position (x, y) in or along the gradient gradient fill,
+         * the corresponding value of s can be determined by solving the quadratic
+         * constraint equation:
+         *
+         * [x - xc(s)]2 + [y - yc(s)]2 = [r(s)]2
+         *
+         * The following code calculates the 2 possible values of s.
+         *
+         * @return Two possible values of s with s[0] <= s[1]
          */
-        private float getXPrime(float x, float y, float x0, float y0,
-                                float x1, float y1) {
-
-            double tp = (((x1 - x0) * (x - x0)) + ((y1 - y0) * (y - y0))) /
-                       (Math.pow(x1 - x0, 2) + Math.pow(y1 - y0, 2));
-
-            return (float) tp;
-        }
-
-        /**
-         * t = t0 + (t1 - t0) x x'
-         */
-        private float getT(float xp) {
-            float t0 = getMinT();
-            float t1 = getMaxT();
-
-            if (xp < 0) {
-                return t0;
-            } else if (xp > 1) {
-                return t1;
-            } else {
-                return t0 + ((t1 - t0) * xp);
-            }
+        private float[] calculateInputValues(float x, float y) {
+        	double p = -(x - center1.getX())*dx1x0 -(y - center1.getY())*dy1y0 - radius1*dr1r0;
+            double q = (Math.pow(x - center1.getX(), 2) + Math.pow(y - center1.getY(), 2) - sqr0);
+            double root = Math.sqrt(p*p - denom*q);
+            float root1 = (float) ((-p + root)/denom);
+            float root2 = (float) ((-p - root)/denom);
+            if (denom < 0) return new float[]{root1, root2};
+            else return new float[]{root2, root1};
         }
     }
 }
