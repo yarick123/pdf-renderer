@@ -27,7 +27,6 @@ import java.io.RandomAccessFile;
 import java.util.*;
 import java.util.regex.Pattern;
 
-import com.sun.org.apache.xalan.internal.xsltc.compiler.util.MultiHashtable;
 import com.sun.pdfview.PDFObject;
 import com.sun.pdfview.PDFParseException;
 import com.sun.pdfview.font.ttf.TrueTypeFont;
@@ -187,11 +186,9 @@ public abstract class PDFFont {
             // load a type 3 font
             font = new Type3Font(baseFont, obj, resources, descriptor);
         } else if (subType.equals("CIDFontType2")) {
-            font = new CIDFontType2(baseFont, obj, descriptor);
+            font = descriptor.getFontFile2() != null ? new CIDFontType2(baseFont, obj, descriptor) : new BuiltinFont(baseFont, obj, descriptor); // fake it with a built-in font
         } else if (subType.equals("CIDFontType0")) {
-            font = new CIDFontType2(baseFont, obj, descriptor);
-//            font = new CIDFontType0(baseFont, obj, descriptor);
-//            throw new IOException ("CIDFontType0 is unimplemented. " + obj);
+            font = descriptor.getFontFile2() !=null ? new CIDFontType2(baseFont, obj, descriptor) : new CIDFontType0(baseFont, obj, descriptor);
         } else {
             throw new PDFParseException("Don't know how to handle a '" +
                     subType + "' font");
